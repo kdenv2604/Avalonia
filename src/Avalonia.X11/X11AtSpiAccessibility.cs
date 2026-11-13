@@ -28,7 +28,10 @@ namespace Avalonia.X11
         internal void Initialize()
         {
             _watcher = new AtSpiAccessibilityWatcher();
-            _ = InitializeAsync();
+            // Платформа настраивается до установки контекста синхронизации Application.
+            // Запускаем через диспетчер: асинхронная подготовка и повторная регистрация
+            // окон должны создавать automation peers в том же потоке UI.
+            Dispatcher.UIThread.Post(() => _ = InitializeAsync());
         }
 
         internal void TrackWindow(X11Window window) => _trackedWindows.Add(window);
