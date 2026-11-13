@@ -85,11 +85,11 @@ internal class GlibDispatcherImpl :
     {
         _platform = platform;
         _x11Events = new X11EventDispatcher(platform);
-        var unixFdId = g_unix_fd_add_full(G_PRIORITY_DEFAULT, _x11Events.Fd, GIOCondition.G_IO_IN,
-            X11SourceCallback);
-        // We can trigger a nested event loop when handling X11 events, so we need to mark the source as recursive
-        var unixFdSource = g_main_context_find_source_by_id(IntPtr.Zero, unixFdId);
-        g_source_set_can_recurse(unixFdSource, 1);
+        // Синхронный вызов Xlib может прочитать ClientMessage в свою очередь,
+        // оставив fd пустым. prepare/check проверяют эту очередь до сна GLib:
+        // закрытие окна не должно ждать движения мыши или другого X-события.
+        AddBufferedUnixFdSource(G_PRIORITY_DEFAULT, _x11Events.Fd,
+            () => _x11Events.IsPending, X11SourceCallback, HandleException);
     }
 
     public bool CurrentThreadIsLoopThread => _mainThread == Thread.CurrentThread;
